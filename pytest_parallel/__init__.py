@@ -56,11 +56,13 @@ def run_test(session, item, nextitem):
         raise session.Interrupted(session.shouldstop)
 
 
-def process_with_threads(config, queue, session, tests_per_worker, errors):
+def process_with_threads(config, queue, session, tests_per_worker, errors, index):
     # This function will be called from subprocesses, forked from the main
     # pytest process. First thing we need to do is to change config's value
     # so we know we are running as a worker.
     config.parallel_worker = True
+
+    os.environ["PYTEST_PARALLEL_PROCCESS"] = str(index)
 
     threads = []
     for _ in range(tests_per_worker):
@@ -296,8 +298,8 @@ class ParallelRunner(object):
         # This flag will be changed after the worker's fork.
         self._config.parallel_worker = False
 
-        args = (self._config, queue, session, tests_per_worker, errors)
-        for _ in range(self.workers):
+        for i in range(self.workers):
+            args = (self._config, queue, session, tests_per_worker, errors, i)
             process = Process(target=process_with_threads, args=args)
             process.start()
             processes.append(process)
